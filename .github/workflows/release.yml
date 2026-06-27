@@ -1,0 +1,35 @@
+name: Compile and Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Compile and Package Release
+    runs-on: macos-latest
+    
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set compile script execution permission
+        run: chmod +x build.sh
+
+      - name: Compile and package application
+        run: ./build.sh
+
+      - name: Compress packaged bundle
+        run: |
+          cd build
+          zip -r MenuSwitch.zip MenuSwitch.app
+
+      - name: Publish GitHub Release and Upload Asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/MenuSwitch.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
