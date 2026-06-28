@@ -9,6 +9,8 @@ jobs:
   release:
     name: Compile and Package Release
     runs-on: macos-latest
+    permissions:
+      contents: write
     
     steps:
       - name: Check out repository
