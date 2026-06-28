@@ -3,6 +3,7 @@ import SwiftUI
 struct PopoverView: View {
     @StateObject private var settings = SettingsManager.shared
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.colorScheme) private var colorScheme
     
     @State private var proxies: [String: ProxyItem] = [:]
     @State private var orderedKeys: [String] = []
@@ -12,18 +13,61 @@ struct PopoverView: View {
     @State private var errorMessage: String? = nil
     @State private var isTestingLatency = false
     @State private var isProxyEnabled = false
+    @State private var testingNodes: Set<String> = []
+    @State private var hoveredNode: String? = nil
     
     private let timer = Timer.publish(every: 15, on: .main, in: .common).autoconnect()
     
-    var body: some View {
-        ZStack {
-            // Elegant Dark Glassmorphic background
-            LinearGradient(
+    // Adaptive theme colors
+    private var popoverBackground: LinearGradient {
+        if colorScheme == .dark {
+            return LinearGradient(
                 colors: [Color(red: 0.05, green: 0.07, blue: 0.12), Color(red: 0.02, green: 0.03, blue: 0.05)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            .ignoresSafeArea()
+        } else {
+            return LinearGradient(
+                colors: [Color(red: 0.95, green: 0.97, blue: 0.98), Color(red: 0.90, green: 0.92, blue: 0.95)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+    }
+    
+    private var sidebarBackgroundColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.18) : Color.black.opacity(0.04)
+    }
+    
+    private var itemSelectedBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.06)
+    }
+    
+    private var servicePickerBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.04) : Color.black.opacity(0.04)
+    }
+    
+    private var dividerBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.08)
+    }
+    
+    private var gearIconBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.05)
+    }
+    
+    private var textColorPrimary: Color {
+        colorScheme == .dark ? .white : .primary
+    }
+    
+    private var textColorSecondary: Color {
+        colorScheme == .dark ? .gray : .secondary
+    }
+    
+    var body: some View {
+        ZStack {
+            // Elegant Dynamic Glassmorphic background
+            popoverBackground
+                .ignoresSafeArea()
             
             VStack(spacing: 12) {
                 // MARK: - Header
@@ -51,17 +95,17 @@ struct PopoverView: View {
                             
                             Text(isProxyEnabled ? "Proxy: ON" : "Proxy: OFF")
                                 .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                .foregroundColor(.white)
+                                .foregroundColor(textColorPrimary)
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
                         .background(
                             Capsule()
-                                .fill(isProxyEnabled ? Color.emerald.opacity(0.15) : Color.white.opacity(0.05))
+                                .fill(isProxyEnabled ? Color.emerald.opacity(0.15) : (colorScheme == .dark ? Color.white : Color.black).opacity(0.05))
                         )
                         .overlay(
                             Capsule()
-                                .strokeBorder(isProxyEnabled ? Color.emerald.opacity(0.4) : Color.white.opacity(0.1), lineWidth: 1)
+                                .strokeBorder(isProxyEnabled ? Color.emerald.opacity(0.4) : (colorScheme == .dark ? Color.white : Color.black).opacity(0.1), lineWidth: 1)
                         )
                     }
                     .buttonStyle(.plain)
@@ -89,7 +133,7 @@ struct PopoverView: View {
                         .labelsHidden()
                         .pickerStyle(.menu)
                         .frame(height: 24)
-                        .background(Color.white.opacity(0.04))
+                        .background(servicePickerBackgroundColor)
                         .cornerRadius(6)
                         .onChange(of: settings.activeServiceId) { _ in
                             Task { await loadProxies() }
@@ -115,7 +159,7 @@ struct PopoverView: View {
                 .padding(.horizontal, 16)
                 
                 Divider()
-                    .background(Color.white.opacity(0.08))
+                    .background(dividerBackgroundColor)
                 
                 if let error = errorMessage {
                     // Error view
@@ -127,11 +171,11 @@ struct PopoverView: View {
                         
                         Text("Connection Failed")
                             .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(textColorPrimary)
                         
                         Text(error)
                             .font(.system(size: 11))
-                            .foregroundColor(.gray)
+                            .foregroundColor(textColorSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 24)
                         
@@ -190,7 +234,7 @@ struct PopoverView: View {
                                                 HStack {
                                                     Text(group)
                                                         .font(.system(size: 11, weight: isSelected ? .bold : .medium))
-                                                        .foregroundColor(isSelected ? .white : .gray)
+                                                        .foregroundColor(isSelected ? textColorPrimary : textColorSecondary)
                                                         .lineLimit(1)
                                                     Spacer()
                                                     if isSelected {
@@ -203,13 +247,13 @@ struct PopoverView: View {
                                                 if let nowSelected = proxies[group]?.now {
                                                     Text(nowSelected)
                                                         .font(.system(size: 9))
-                                                        .foregroundColor(isSelected ? .blue.opacity(0.85) : .gray)
+                                                        .foregroundColor(isSelected ? .blue : textColorSecondary)
                                                         .lineLimit(1)
                                                 }
                                             }
                                             .padding(.horizontal, 10)
                                             .padding(.vertical, 5)
-                                            .background(isSelected ? Color.white.opacity(0.06) : Color.clear)
+                                            .background(isSelected ? itemSelectedBackgroundColor : Color.clear)
                                             .cornerRadius(6)
                                         }
                                         .buttonStyle(.plain)
@@ -220,10 +264,10 @@ struct PopoverView: View {
                             }
                         }
                         .frame(width: 110)
-                        .background(Color.black.opacity(0.18))
+                        .background(sidebarBackgroundColor)
                         
                         Divider()
-                            .background(Color.white.opacity(0.08))
+                            .background(dividerBackgroundColor)
                         
                         // Right Column: Scrollable nodes list
                         VStack(spacing: 0) {
@@ -241,47 +285,69 @@ struct PopoverView: View {
                                             let isSelected = nodeName == proxies[selectedGroup]?.now
                                             let delay = getDelayForNode(nodeName)
                                             
-                                            Button(action: { selectNode(nodeName) }) {
-                                                HStack {
-                                                    if isSelected {
-                                                        Circle()
-                                                            .fill(Color.blue)
-                                                            .frame(width: 6, height: 6)
-                                                            .shadow(color: Color.blue.opacity(0.8), radius: 2)
-                                                    } else {
-                                                        Circle()
-                                                            .fill(Color.clear)
-                                                            .frame(width: 6, height: 6)
-                                                    }
-                                                    
-                                                    Text(nodeName)
-                                                        .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
-                                                        .foregroundColor(isSelected ? .white : .gray)
-                                                        .lineLimit(1)
-                                                    
-                                                    Spacer()
-                                                    
-                                                    let upperNodeName = nodeName.uppercased()
-                                                    if upperNodeName != "DIRECT" &&
-                                                       upperNodeName != "REJECT" &&
-                                                       upperNodeName != "REJECT-DROP" {
-                                                        Text(delayString(for: delay))
-                                                            .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                                            .foregroundColor(delayColor(for: delay))
-                                                            .padding(.horizontal, 6)
-                                                            .padding(.vertical, 2)
-                                                            .background(
-                                                                Capsule()
-                                                                    .fill(delayColor(for: delay).opacity(0.12))
-                                                            )
-                                                    }
+                                            HStack {
+                                                if isSelected {
+                                                    Circle()
+                                                        .fill(Color.blue)
+                                                        .frame(width: 6, height: 6)
+                                                        .shadow(color: Color.blue.opacity(0.8), radius: 2)
+                                                } else {
+                                                    Circle()
+                                                        .fill(Color.clear)
+                                                        .frame(width: 6, height: 6)
                                                 }
-                                                .padding(.horizontal, 10)
-                                                .padding(.vertical, 6)
-                                                .background(isSelected ? Color.white.opacity(0.05) : Color.clear)
-                                                .cornerRadius(6)
+                                                
+                                                Text(nodeName)
+                                                    .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                                                    .foregroundColor(isSelected ? textColorPrimary : textColorSecondary)
+                                                    .lineLimit(1)
+                                                
+                                                Spacer()
+                                                
+                                                let upperNodeName = nodeName.uppercased()
+                                                if upperNodeName != "DIRECT" &&
+                                                   upperNodeName != "REJECT" &&
+                                                   upperNodeName != "REJECT-DROP" {
+                                                    Button(action: { triggerNodeLatencyTest(nodeName) }) {
+                                                        if testingNodes.contains(nodeName) {
+                                                            ProgressView()
+                                                                .progressViewStyle(.circular)
+                                                                .scaleEffect(0.3)
+                                                                .frame(width: 10, height: 10)
+                                                        } else {
+                                                            Text(delayString(for: delay))
+                                                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                                        }
+                                                    }
+                                                    .buttonStyle(.plain)
+                                                    .foregroundColor(delayColor(for: delay))
+                                                    .padding(.horizontal, 6)
+                                                    .padding(.vertical, 2)
+                                                    .background(
+                                                        Capsule()
+                                                            .fill(delayColor(for: delay).opacity(0.12))
+                                                    )
+                                                    .help("Click to test latency for \(nodeName)")
+                                                }
                                             }
-                                            .buttonStyle(NodeListButtonStyle())
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 6)
+                                            .background(
+                                                isSelected ? itemSelectedBackgroundColor : 
+                                                (hoveredNode == nodeName ? (colorScheme == .dark ? Color.white.opacity(0.04) : Color.black.opacity(0.04)) : Color.clear)
+                                            )
+                                            .cornerRadius(6)
+                                            .contentShape(Rectangle())
+                                            .onTapGesture {
+                                                selectNode(nodeName)
+                                            }
+                                            .onHover { isHovered in
+                                                if isHovered {
+                                                    hoveredNode = nodeName
+                                                } else if hoveredNode == nodeName {
+                                                    hoveredNode = nil
+                                                }
+                                            }
                                         }
                                     }
                                     .padding(.horizontal, 8)
@@ -295,7 +361,7 @@ struct PopoverView: View {
                 }
                 
                 Divider()
-                    .background(Color.white.opacity(0.08))
+                    .background(dividerBackgroundColor)
                 
                 // MARK: - Footer
                 HStack {
@@ -331,9 +397,9 @@ struct PopoverView: View {
                     }) {
                         Image(systemName: "gearshape.fill")
                             .font(.system(size: 13))
-                            .foregroundColor(.gray)
+                            .foregroundColor(textColorSecondary)
                             .padding(6)
-                            .background(Color.white.opacity(0.05))
+                            .background(gearIconBackgroundColor)
                             .cornerRadius(6)
                     }
                     .buttonStyle(.plain)
@@ -474,6 +540,50 @@ struct PopoverView: View {
         }
     }
     
+    private func triggerNodeLatencyTest(_ nodeName: String) {
+        guard let service = settings.activeService else { return }
+        testingNodes.insert(nodeName)
+        Task {
+            do {
+                let delay = try await MihomoAPI.shared.testNodeLatency(service: service, nodeName: nodeName)
+                DispatchQueue.main.async {
+                    if let node = proxies[nodeName] {
+                        let newHistoryItem = HistoryItem(time: "", delay: delay)
+                        let updatedHistory = (node.history ?? []) + [newHistoryItem]
+                        let updatedNode = ProxyItem(
+                            name: node.name,
+                            type: node.type,
+                            now: node.now,
+                            all: node.all,
+                            history: updatedHistory
+                        )
+                        proxies[nodeName] = updatedNode
+                    }
+                    Task { await loadProxies() }
+                }
+            } catch {
+                print("[PopoverView] Error testing node latency for \(nodeName): \(error)")
+                DispatchQueue.main.async {
+                    if let node = proxies[nodeName] {
+                        let newHistoryItem = HistoryItem(time: "", delay: 0)
+                        let updatedHistory = (node.history ?? []) + [newHistoryItem]
+                        let updatedNode = ProxyItem(
+                            name: node.name,
+                            type: node.type,
+                            now: node.now,
+                            all: node.all,
+                            history: updatedHistory
+                        )
+                        proxies[nodeName] = updatedNode
+                    }
+                }
+            }
+            DispatchQueue.main.async {
+                testingNodes.remove(nodeName)
+            }
+        }
+    }
+    
     private func toggleProxy() {
         let nextState = !isProxyEnabled
         isProxyEnabled = nextState
@@ -517,9 +627,15 @@ extension Color {
 
 // Button Hover Effects
 struct NodeListButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var colorScheme
+    
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .contentShape(Rectangle())
-            .background(configuration.isPressed ? Color.white.opacity(0.08) : Color.clear)
+            .background(
+                configuration.isPressed ? 
+                    (colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06)) : 
+                    Color.clear
+            )
     }
 }

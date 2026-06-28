@@ -29,7 +29,7 @@ struct SettingsView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
                     // Left list of services
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 0) {
                         List(selection: $selectedServiceId) {
                             ForEach(settings.services) { service in
                                 Text(service.name)
@@ -37,7 +37,8 @@ struct SettingsView: View {
                             }
                         }
                         .listStyle(.sidebar)
-                        .frame(width: 150)
+                        
+                        Divider()
                         
                         HStack {
                             Button(action: addService) {
@@ -58,6 +59,7 @@ struct SettingsView: View {
                         .background(Color(NSColor.windowBackgroundColor))
                     }
                     .frame(width: 150)
+                    .frame(maxHeight: .infinity)
                     
                     Divider()
                     
@@ -151,7 +153,6 @@ struct SettingsView: View {
             .tabItem {
                 Label("Services", systemImage: "server.rack")
             }
-            .frame(width: 480, height: 340)
             .onChange(of: selectedServiceId) { newId in
                 if let newId = newId,
                    let service = settings.services.first(where: { $0.id == newId }) {
@@ -206,13 +207,27 @@ struct SettingsView: View {
                     Toggle("Launch at Login", isOn: $settings.launchAtLogin)
                         .padding(.vertical, 4)
                     
+                    HStack {
+                        Text("Theme Mode")
+                            .frame(width: 110, alignment: .leading)
+                        Picker("", selection: $settings.themeMode) {
+                            ForEach(ThemeMode.allCases) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .frame(width: 120)
+                    }
+                    .padding(.vertical, 4)
+                    
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Detected Network Services:")
                             .font(.caption)
                             .foregroundColor(.gray)
                         Text(activeInterfaces.isEmpty ? "None" : activeInterfaces.joined(separator: ", "))
                             .font(.caption)
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                             .fontWeight(.semibold)
                     }
                 }
@@ -265,7 +280,6 @@ struct SettingsView: View {
             .tabItem {
                 Label("System Proxy", systemImage: "network")
             }
-            .frame(width: 480, height: 340)
             .onAppear {
                 tempHost = settings.proxyHost
                 tempPortString = String(settings.port)
@@ -273,6 +287,7 @@ struct SettingsView: View {
                 activeInterfaces = ProxyManager.shared.getActiveNetworkServices()
             }
         }
+        .frame(width: 480, height: 340)
     }
     
     // MARK: - Actions

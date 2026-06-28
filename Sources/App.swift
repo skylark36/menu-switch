@@ -8,6 +8,7 @@ struct MenuSwitchApp: App {
         MenuBarExtra {
             PopoverView()
                 .frame(width: 360, height: 400)
+                .preferredColorScheme(settings.colorScheme)
         } label: {
             Text(settings.systemProxyEnabled ? "🔰" : "🌐")
         }
@@ -15,6 +16,7 @@ struct MenuSwitchApp: App {
         
         Window("MenuSwitch Preferences", id: "settings-window") {
             SettingsView()
+                .preferredColorScheme(settings.colorScheme)
         }
         .windowStyle(.titleBar)
         .windowResizability(.contentSize)

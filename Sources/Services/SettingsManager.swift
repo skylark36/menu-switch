@@ -1,11 +1,20 @@
 import Foundation
 import ServiceManagement
+import SwiftUI
 
 struct MihomoService: Codable, Identifiable, Equatable {
     var id = UUID()
     var name: String
     var url: String
     var secret: String
+}
+
+enum ThemeMode: String, CaseIterable, Identifiable, Codable {
+    case auto = "Auto"
+    case light = "Light"
+    case dark = "Dark"
+    
+    var id: String { rawValue }
 }
 
 class SettingsManager: ObservableObject {
@@ -16,6 +25,7 @@ class SettingsManager: ObservableObject {
     private let portKey = "menu_switch_port"
     private let proxyHostKey = "menu_switch_proxy_host"
     private let bypassDomainsKey = "menu_switch_bypass_domains"
+    private let themeModeKey = "menu_switch_theme_mode"
     
     @Published var services: [MihomoService] {
         didSet {
@@ -55,6 +65,20 @@ class SettingsManager: ObservableObject {
     
     @Published var systemProxyEnabled: Bool = false
     
+    @Published var themeMode: ThemeMode {
+        didSet {
+            UserDefaults.standard.set(themeMode.rawValue, forKey: themeModeKey)
+        }
+    }
+    
+    var colorScheme: ColorScheme? {
+        switch themeMode {
+        case .auto: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+    
     private init() {
         // 1. Load services
         let loadedServices: [MihomoService]
@@ -86,6 +110,10 @@ class SettingsManager: ObservableObject {
         // 4. Synchronize initial launch status
         self.launchAtLogin = SMAppService.mainApp.status == .enabled
         self.systemProxyEnabled = ProxyManager.shared.checkSystemProxyStatus()
+        
+        // 5. Load theme mode settings
+        let savedTheme = UserDefaults.standard.string(forKey: themeModeKey) ?? ThemeMode.auto.rawValue
+        self.themeMode = ThemeMode(rawValue: savedTheme) ?? .auto
     }
     
     var activeService: MihomoService? {

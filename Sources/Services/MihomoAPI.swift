@@ -167,6 +167,37 @@ class MihomoAPI {
         }
     }
     
+    func testNodeLatency(service: MihomoService, nodeName: String) async throws -> Int {
+        var urlString = service.url.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !urlString.lowercased().hasPrefix("http://") && !urlString.lowercased().hasPrefix("https://") {
+            urlString = "http://" + urlString
+        }
+        
+        guard let escapedNodeName = nodeName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+              let url = URL(string: "\(urlString)/proxies/\(escapedNodeName)/delay?timeout=2000&url=http://www.gstatic.com/generate_204") else {
+            throw MihomoAPIError.invalidURL
+        }
+        
+        let request = makeRequest(url: url, secret: service.secret)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            throw MihomoAPIError.requestFailed(statusCode: httpResponse.statusCode)
+        }
+        
+        struct DelayResponse: Codable {
+            let delay: Int
+        }
+        
+        let delayResponse = try JSONDecoder().decode(DelayResponse.self, from: data)
+        return delayResponse.delay
+    }
+    
     func fetchMode(service: MihomoService) async throws -> String {
         var urlString = service.url.trimmingCharacters(in: .whitespacesAndNewlines)
         if !urlString.lowercased().hasPrefix("http://") && !urlString.lowercased().hasPrefix("https://") {
