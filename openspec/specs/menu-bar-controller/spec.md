@@ -1,9 +1,8 @@
 # Menu Bar Controller
 
-TBD: Spec for Menu Bar Controller.
-
+## Purpose
+Spec for the Menu Bar Controller that handles menu status and proxy service switching.
 ## Requirements
-
 ### Requirement: Show Status Bar Icon and Handle Popover Display
 The app SHALL display a native status bar icon in the macOS menu bar. Clicking this icon SHALL toggle the visibility of a custom SwiftUI popover panel.
 
@@ -56,3 +55,23 @@ The popover panel SHALL contain a settings button (gear icon) in the footer to o
 #### Scenario: Open settings window
 - **WHEN** the user clicks the gear settings button in the popover footer
 - **THEN** the app instantiates or focuses the native, standalone Settings Window and dismisses the status bar popover
+
+### Requirement: Theme Mode Configuration and Auto Switching
+The app SHALL provide a Theme Mode configuration setting with options: Auto (system theme), Light, and Dark. The app SHALL dynamically monitor and adapt its interface elements, background colors, and typography colors to match the active color scheme.
+
+#### Scenario: Auto theme mode adapts to macOS light mode
+- **WHEN** the user sets Theme Mode to Auto and the macOS system theme is set to light mode
+- **THEN** the popover and settings windows SHALL render in light mode style with a light background and dark high-contrast text
+
+#### Scenario: Auto theme mode adapts to macOS dark mode
+- **WHEN** the user sets Theme Mode to Auto and the macOS system theme is set to dark mode
+- **THEN** the popover and settings windows SHALL render in dark mode style with a dark background and white/gray high-contrast text
+
+#### Scenario: Force light theme override
+- **WHEN** the user sets Theme Mode to Light
+- **THEN** the app SHALL render in light mode style regardless of the macOS system theme
+
+#### Scenario: Force dark theme override
+- **WHEN** the user sets Theme Mode to Dark
+- **THEN** the app SHALL render in dark mode style regardless of the macOS system theme
+
